@@ -48,12 +48,29 @@ def _get_successors(node, grid):
 
     return successors
 
+def _get_neighbours(pos, grid):
+    n_cols = len(grid[0])
+    n_rows = len(grid)
+
+    neighbours = []
+    node_x, node_y = pos
+    for dx in [-1, 0, + 1]:
+        for dy in [-1, 0, +1]:
+            x = node_x + dx
+            y = node_y + dy
+            if (0 <= x < n_rows) and (0 <= y < n_cols) and (x, y) != pos: 
+                neighbours.append((x, y))
+    return neighbours
+
 def _node_with_min_fscore(open_set, f_cost): # open_set is a set (of cell) and f_cost is a dict (with cells as keys)
     """
     Find the cell in open set with the smallest f score.
     """
     f_cost_open = dict([a for a in f_cost.items() if a[0] in open_set])
     return min(f_cost_open, key=f_cost_open.get)
+
+def _grid_cost(pos, grid):
+    return grid[pos[0]][pos[1]]
 
 def a_star_search(grid, start, end, heuristic_cost=manhattan_cost):
     """
@@ -72,8 +89,8 @@ def a_star_search(grid, start, end, heuristic_cost=manhattan_cost):
     closed_set = set()
 
     # the set of cells already discovered
-    open_set = set()
-    open_set.add(start)
+    open_set = PriorityQueue()
+    open_set.put(start, (heuristic_cost(start, end), grid_cost(start, grid)))
 
     # for each cell, mapping to its least-cost incoming cell
     prev = {}
@@ -82,35 +99,30 @@ def a_star_search(grid, start, end, heuristic_cost=manhattan_cost):
     # for each node, cost of getting from start to dest via that node (f_cost)
     #   note: cell->dest component of f_cost will be estimated using a heuristic
     g_cost = {}
-    f_cost = {}
     for r in range(len(grid)):
         for c in range(len(grid[0])):
             cell = (r, c)
             g_cost[cell] = inf
-            f_cost[cell] = inf
+            
     g_cost[start] = 0
-    f_cost[start] = heuristic_cost(start, end)
-
-    while open_set:
+    while not open_set.empty():
         # node in open set with min fscore
-        curr = _node_with_min_fscore(open_set, f_cost)
+        curr = open_set.get()
 
         # if we've reached the destination
         if curr == end:
             return _reconstruct_path_to_destination(prev, curr)
 
-        open_set.remove(curr)
-        closed_set.add(curr)
-
-        for neighbor, cost in _get_successors(curr, grid):
+        for neighbor in get_neighbours(curr, grid):
             # ignore neighbors which have already been evaluated
             if neighbor in closed_set:
                 continue
 
-            curr_g_score =  g_cost[curr] + cost
+            curr_g_score =  g_cost[curr] + _grid_cost(neighbour, grid)
             # add neighbor to newly discovered nodes
             if neighbor not in open_set:
-                open_set.add(neighbor)
+                f_cost = g_cost[neighbor] + heuristic_cost(neighbor, end)
+                open_set.put(neighbour, (f_cost, _grid_cost(neighbour, grid)))
 
             # if we've already got a lower g_score for neighbor, then move on
             elif curr_g_score >= g_cost[neighbor]:
@@ -118,7 +130,9 @@ def a_star_search(grid, start, end, heuristic_cost=manhattan_cost):
 
             prev[neighbor] = curr
             g_cost[neighbor] = curr_g_score
-            f_cost[neighbor] = g_cost[neighbor] + heuristic_cost(neighbor, end)
+        
+        closed_set.add(curr)
+
 
     # if we get to this point, it's not possible to reach the end destination
     return []
