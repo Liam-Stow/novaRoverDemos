@@ -1,6 +1,6 @@
-from a_star import a_star_search
-from dijkstra import dijkstra_search
-from greedy_search import greedy_search
+from pathfinding.a_star import a_star_search
+from pathfinding.dijkstra import dijkstra_search
+from pathfinding.greedy_search import greedy_search
 
 def basic_grid():
     array = [0.0, 0.1, 0.6, 0.8]
